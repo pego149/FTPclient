@@ -71,12 +71,13 @@ int main() {
     int filehandle;
 
     sock = socket(AF_INET, SOCK_STREAM, 0); //inicializácia socketu
-    struct timespec tv;
+    struct timeval tv;
     tv.tv_sec = 1;
+    tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv); //nastavenie optimálnosti socketu
 
     printf("Zadajte server: ");
-    bzero(host, 10000);
+    bzero(host, 20);
     scanf("%s", host);
     printf("Zadajte port: ");
     scanf("%d", &port);
@@ -262,6 +263,7 @@ int main() {
                     usleep(500000);
                     data.sock = 0;
                     pthread_detach(prijmac);
+                    pthread_detach(pasiver);
                     usleep(1000000);
                     exit(0);
                 default:
@@ -411,6 +413,7 @@ int main() {
                     usleep(500000);
                     data.sock = 0;
                     pthread_detach(prijmac);
+                    pthread_detach(pasiver);
                     usleep(1000000);
                     exit(0);
                 default:
