@@ -12,4 +12,4 @@ typedef struct data {
 
 void *recv_ftp(void *in);
 void *ftp_enter_pasv(void *in);
-int main(int argc, char *argv[]);
+int main();

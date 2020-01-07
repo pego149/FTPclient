@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <time.h>
 
 /*for getting file size using stat()*/
 #include<sys/stat.h>
@@ -17,6 +18,8 @@
 #include<fcntl.h>
 #include "ftpklient.h"
 
+#define h_addr h_addr_list[0]
+
 //Set FTP server to passive mode and resolve data ports
 void *ftp_enter_pasv(void *in) { //listening
     DATA *data = (DATA*) in;
@@ -24,9 +27,8 @@ void *ftp_enter_pasv(void *in) { //listening
     data->portpasv = 1;
     usleep(1000000);
     char *find;
-    int a, b, c, d;
     char buf[10000];
-    int pa, pb;
+    int pa;
     char *mess = "EPSV\r\n";
     send(data->sock, mess, strlen(mess), 0); //send a message on a socket
     bzero(buf, 10000); //vynulovanie buffera
@@ -55,25 +57,22 @@ void *recv_ftp(void *in) {
     return NULL;
 }
 
-int main(int argc, char *argv[]) {
+int main() {
     struct sockaddr_in server;
     struct hostent *srv;
     struct stat obj;
     int port;
     int sock, sockpasv;
-    int choice, true;
+    int choice;
     //char *mess;
     char buf[10000], filename[20], in[30], nazov[50], host[20], user[20];
-    char *f;
     int k;
     int size;
-    int status;
     int filehandle;
 
     sock = socket(AF_INET, SOCK_STREAM, 0); //inicializácia socketu
-    struct timeval tv;
+    struct timespec tv;
     tv.tv_sec = 1;
-    tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv); //nastavenie optimálnosti socketu
 
     printf("Zadajte server: ");
@@ -139,7 +138,6 @@ int main(int argc, char *argv[]) {
         fclose(logger);
     };
 
-    int i = 1;
     while (1) {
         printf("PC/FTP:\n1- PC\n2- FTP\nZvolte cislo: ");
         scanf("%d", &choice);
@@ -262,9 +260,10 @@ int main(int argc, char *argv[]) {
                     //mess = "QUIT\r\n";
                     send(sock, /*mess*/(void *)"QUIT\r\n", 6, 0);
                     usleep(500000);
-                    pthread_exit(0);
+                    data.sock = 0;
+                    pthread_detach(prijmac);
+                    usleep(1000000);
                     exit(0);
-
                 default:
                     printf("Zly vstup.");
             }
@@ -273,11 +272,68 @@ int main(int argc, char *argv[]) {
             scanf("%d", &choice);
             switch (choice) {
                 case 1: //GET
+                    printf("Enter filename to get from server: ");
+                    scanf("%s", filename);
 
-                    break;
+                    pthread_create(&pasiver, NULL, &ftp_enter_pasv, &data);
+                    usleep(2000000);
+
+                    bzero(buf, 10000);
+                    strcpy(buf, "RETR ");
+                    strcat(buf, filename);
+                    strcat(buf, "\r\n");
+                    send(sock, buf, 100, 0);
+                    usleep(500000);
+                    if(data.kod == 550) {
+                        printf("%s\n", buf);
+                        break;
+                    }
+
+                    server.sin_port = htons(data.portpasv);
+                    sockpasv = socket(AF_INET, SOCK_STREAM, 0);
+                    connect(sockpasv, (struct sockaddr *) &server, sizeof(server));
+                    usleep(500000);
+
+                    bzero(buf, 10000);
+                    recv(sockpasv, buf, 10000, 0);
+                    filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
+                    write(filehandle, buf, strlen(buf));
+                    close(sockpasv);
+                    close(filehandle);
+                    usleep(500000);
+                    break; //get
                 case 2: //PUT
+                    printf("Enter filename to put to server: ");
+                    scanf("%s", filename);
+                    filehandle = open(filename, O_RDONLY);
+                    if (filehandle == -1) {
+                        printf("Subor nenajdeny\n\n");
+                        break;
+                    }
+                    pthread_create(&pasiver, NULL, &ftp_enter_pasv, &data);
+                    usleep(2000000);
 
-                    break;
+                    bzero(buf, 10000);
+                    strcpy(buf, "STOR ");
+                    strcat(buf, filename);
+                    strcat(buf, "\r\n");
+                    send(sock, buf, 100, 0);
+                    usleep(500000);
+                    if(data.kod == 550) {
+                        break;
+                    }
+
+                    server.sin_port = htons(data.portpasv);
+                    sockpasv = socket(AF_INET, SOCK_STREAM, 0);
+                    connect(sockpasv, (struct sockaddr *) &server, sizeof(server));
+                    usleep(300000);
+                    stat(filename, &obj);
+                    size = obj.st_size;
+                    sendfile(sockpasv, filehandle, NULL, size);
+                    close(sockpasv);
+                    close(filehandle);
+                    usleep(00000);
+                    break; //put
                 case 3: //PWD
                     //mess = "PWD\r\n";
                     send(sock, /*mess*/ (void*)"PWD\r\n", 5, 0);
@@ -353,10 +409,10 @@ int main(int argc, char *argv[]) {
                     //mess = "QUIT\r\n";
                     send(sock, "QUIT\r\n", 6, 0);
                     usleep(500000);
-                    pthread_exit(0);
+                    data.sock = 0;
+                    pthread_detach(prijmac);
+                    usleep(1000000);
                     exit(0);
-                    break;
-
                 default:
                     printf("Zly vstup.");
             }
