@@ -140,114 +140,49 @@ int main() {
     };
 
     while (1) {
-        printf("PC/FTP:\n1- PC\n2- FTP\nZvolte cislo: ");
+        printf("PC/FTP:\n1- PC\n2- FTP\n3- SFTP\nZvolte cislo: ");
         scanf("%d", &choice);
         if (choice == 1) {
-            char command[50];
-            char prepinace[5];
             char cesta[100];
-            printf("Moznosti:\n1- get\n2- put\n3- pwd\n4- ls\n5- cd\n6- dele\n7- rmd\n8- mkd\n9- touch\n10- quit\nZvolte cislo: ");
+            printf("Moznosti:\n1- pwd\n2- ls\n3- cd\n4- delete\n5- rmd\n6- mkd\n7- touch\n8- quit\nZvolte cislo: ");
             scanf("%d", &choice);
             switch (choice) {
-                case 1: //GET
-                    printf("Enter filename to get from server: ");
-                    scanf("%s", filename);
-
-                    pthread_create(&pasiver, NULL, &ftp_enter_pasv, &data);
-                    usleep(2000000);
-
-                    bzero(buf, 10000);
-                    strcpy(buf, "RETR ");
-                    strcat(buf, filename);
-                    strcat(buf, "\r\n");
-                    send(sock, buf, 100, 0);
-                    usleep(500000);
-                    if(data.kod == 550) {
-                        printf("%s\n", buf);
-                        break;
-                    }
-
-                    server.sin_port = htons(data.portpasv);
-                    sockpasv = socket(AF_INET, SOCK_STREAM, 0);
-                    connect(sockpasv, (struct sockaddr *) &server, sizeof(server));
-                    usleep(500000);
-
-                    bzero(buf, 10000);
-                    recv(sockpasv, buf, 10000, 0);
-                    filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
-                    write(filehandle, buf, strlen(buf));
-                    close(sockpasv);
-                    close(filehandle);
-                    usleep(500000);
-                    break; //get
-                case 2: // PUT
-                    printf("Enter filename to put to server: ");
-                    scanf("%s", filename);
-                    filehandle = open(filename, O_RDONLY);
-                    if (filehandle == -1) {
-                        printf("Subor nenajdeny\n\n");
-                        break;
-                    }
-                    pthread_create(&pasiver, NULL, &ftp_enter_pasv, &data);
-                    usleep(2000000);
-
-                    bzero(buf, 10000);
-                    strcpy(buf, "STOR ");
-                    strcat(buf, filename);
-                    strcat(buf, "\r\n");
-                    send(sock, buf, 100, 0);
-                    usleep(500000);
-                    if(data.kod == 550) {
-                        break;
-                    }
-
-                    server.sin_port = htons(data.portpasv);
-                    sockpasv = socket(AF_INET, SOCK_STREAM, 0);
-                    connect(sockpasv, (struct sockaddr *) &server, sizeof(server));
-                    usleep(300000);
-                    stat(filename, &obj);
-                    size = obj.st_size;
-                    sendfile(sockpasv, filehandle, NULL, size);
-                    close(sockpasv);
-                    close(filehandle);
-                    usleep(1000000);
-                    break; //put
-                case 3: // PWD
+                case 1: // PWD
                     bzero(cesta, 50);
                     system("pwd");
                     //printf("%s\n", getcwd(cesta, 100));
                     break; //pwd
-                case 4: //LS -L
+                case 2: //LS -L
                     system("ls -l");
                     break; //ls
-                case 5: //CD
+                case 3: //CD
                     printf("Enter your path for command 'cd': ");
                     scanf("%s", cesta);
                     chdir(cesta);
                     break; //cd
 
-                case 6: //DELE
+                case 4: //DELE
                     bzero(buf, 10000);
                     printf("Enter a name of file you want to delete: ");
                     scanf("%s", buf);
                     remove(buf);
                     break;
 
-                case 7: //RMDIR
+                case 5: //RMDIR
                     bzero(buf, 10000);
                     printf("Enter a name of directory you want to delete: ");
                     scanf("%s", buf);
                     rmdir(buf);
                     break;
 
-                case 8: //MKDIR
+                case 6: //MKDIR
                     bzero(nazov, 50);
                     printf("Enter a name of directory you want to create: ");
                     scanf("%s", nazov);
                     mkdir(nazov,  0777);
                     break;
 
-                case 9:   //TOUCH
+                case 7:   //TOUCH
                     bzero(buf, 10000);
                     bzero(nazov, 50);
                     printf("Enter a name of file you want to create: ");
@@ -257,7 +192,7 @@ int main() {
                     system(buf);
                     break;
 
-                case 10: //QUIT
+                case 8: //QUIT
                     //mess = "QUIT\r\n";
                     send(sock, /*mess*/(void *)"QUIT\r\n", 6, 0);
                     usleep(500000);
@@ -270,7 +205,7 @@ int main() {
                     printf("Zly vstup.");
             }
         } else if (choice == 2) {
-            printf("Moznosti:\n1- get\n2- put\n3- pwd\n4- ls\n5- cd\n6- dele\n7- rmd\n8- mkd\n9- quit\nZvolte cislo: ");
+            printf("Moznosti:\n1- get\n2- put\n3- pwd\n4- ls\n5- cd\n6- delete\n7- rmd\n8- mkd\n9- quit\nZvolte cislo: ");
             scanf("%d", &choice);
             switch (choice) {
                 case 1: //GET
@@ -334,7 +269,7 @@ int main() {
                     sendfile(sockpasv, filehandle, NULL, size);
                     close(sockpasv);
                     close(filehandle);
-                    usleep(00000);
+                    usleep(500000);
                     break; //put
                 case 3: //PWD
                     //mess = "PWD\r\n";
@@ -403,9 +338,105 @@ int main() {
                     send(sock, in, strlen(in), 0);
                     usleep(500000);
                     break;
-                    //TODO
-                    //Na touch som nic nenasla, to vraj ale ani nie je, ze to je nejaka specificka
-                    //forma STOR a to sme uz urobili
+
+                case 9: //QUIT
+                    //mess = "QUIT\r\n";
+                    send(sock, "QUIT\r\n", 6, 0);
+                    usleep(500000);
+                    data.sock = 0;
+                    pthread_detach(prijmac);
+                    pthread_detach(pasiver);
+                    usleep(1000000);
+                    exit(0);
+                default:
+                    printf("Zly vstup.");
+            }
+        } else if (choice == 3) {
+            printf("Moznosti:\n1- get\n2- put\n\n4- ls\n5- cd\n6- delete\n\n\n9- quit\nZvolte cislo: ");
+            scanf("%d", &choice);
+            switch (choice) {
+                case 1: //GET
+                    printf("Enter filename to get from server: ");
+                    scanf("%s", filename);
+
+                    bzero(buf, 10000);
+                    strcpy(buf, "RETR ");
+                    strcat(buf, filename);
+                    strcat(buf, "\r\n");
+                    send(sock, buf, 100, 0);
+                    usleep(500000);
+                    if(data.kod == 550) {
+                        printf("%s\n", buf);
+                        break;
+                    }
+
+                    bzero(buf, 10000);
+                    recv(sock, buf, 10000, 0);
+                    filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
+                    write(filehandle, buf, strlen(buf));
+                    close(filehandle);
+                    usleep(500000);
+                    break; //get
+                case 2: //PUT
+                    printf("Enter filename to put to server: ");
+                    scanf("%s", filename);
+                    filehandle = open(filename, O_RDONLY);
+                    if (filehandle == -1) {
+                        printf("Subor nenajdeny\n\n");
+                        break;
+                    }
+
+                    bzero(buf, 10000);
+                    strcpy(buf, "STOR ");
+                    strcat(buf, filename);
+                    strcat(buf, "\r\n");
+                    send(sock, buf, 100, 0);
+                    usleep(500000);
+                    if(data.kod == 550) {
+                        break;
+                    }
+                    usleep(300000);
+                    stat(filename, &obj);
+                    size = obj.st_size;
+                    sendfile(sock, filehandle, NULL, size);
+                    close(filehandle);
+                    usleep(500000);
+                    break; //put
+                case 3: //PWD
+                    //mess = "PWD\r\n";
+                    send(sock, /*mess*/ (void*)"PWD\r\n", 5, 0);
+                    usleep(500000);
+                    break;
+                case 4: //LS -L
+                    //mess = "LIST\r\n";
+                    send(sock, "LIST\r\n", 6, 0);
+                    usleep(500000);
+                    bzero(buf, 10000);
+                    recv(sock, buf, 10000, 0);
+                    printf("Obsah priecinka:\n%s\n", buf);
+                    usleep(1000000);
+                    break;
+                case 5: //CD
+                    strcpy(in, "CDIR ");
+                    printf("Enter the path to change the remote directory: ");
+                    bzero(buf, 10000);
+                    scanf("%s", buf);
+                    strcat(in, buf);
+                    strcat(in, "\r\n");
+                    send(sock, in, strlen(in), 0);
+                    usleep(500000);
+                    break;
+
+                case 6: //KILL
+                    strcpy(in, "KILL ");
+                    printf("Enter the file you want to remotely delete: ");
+                    bzero(buf, 10000);
+                    scanf("%s", buf);
+                    strcat(in, buf);
+                    strcat(in, "\r\n");
+                    send(sock, in, strlen(in), 0);
+                    usleep(500000);
+                    break;
 
                 case 9: //QUIT
                     //mess = "QUIT\r\n";
